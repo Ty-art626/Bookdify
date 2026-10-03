@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookdify</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--brand:#8B3DFF;--soft:#EFE5FF;--bg:#FBF9FF;--ink:#1E1633;--muted:#5F5878;--card:#fff;--line:#E3D8F8}
+@media (prefers-color-scheme:dark){:root{--bg:#17102B;--ink:#F3EDFF;--muted:#B9AED6;--card:#221842;--line:#3A2C66;--soft:#2E2158}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,Arial,sans-serif;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px}
+header{background:var(--brand);color:#fff;padding:22px 0}
+header .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}
+header h1{margin:0;font-size:1.8rem;font-weight:800;letter-spacing:-.03em}
+.out{background:#fff;color:#5B1FC4;border:0;border-radius:999px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
+.box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin:24px 0;display:grid;gap:12px}
+h2{margin:0 0 4px}
+label{font-weight:600;display:grid;gap:5px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+.btn{font:inherit;font-weight:600;background:var(--brand);color:#fff;border:0;border-radius:999px;padding:12px 22px;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
+.btn.alt{background:var(--soft);color:var(--brand)}
+.link{background:none;border:0;color:var(--brand);font:inherit;text-decoration:underline;cursor:pointer;padding:4px}
+.msg{color:#C0264B;min-height:1.2em;margin:0}
+.ok{color:#1B8A4B}
+.tabs{display:flex;gap:8px;margin:20px 0 0}
+.tabs button{flex:1;font:inherit;font-weight:600;padding:11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+li{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+li small{color:var(--muted);display:block}
+.stars{color:var(--brand);letter-spacing:2px;white-space:nowrap}
+.issue{display:block;border-left-width:6px}
+.issue p{white-space:pre-wrap;margin:6px 0 0}
+.hide{display:none!important}
+footer{margin:40px 0;color:var(--muted)}
+footer a{color:var(--brand);font-weight:600}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Bookdify</h1><button class="out hide" id="logout">Log out</button></div></header>
+
+<main class="wrap">
+  <section id="authView" class="box">
+    <h2>Log in or create an account</h2>
+    <p style="margin:0;color:var(--muted)">Keep track of the books you have read and read our newsletter.</p>
+    <label>Email<input id="em" type="email" autocomplete="email"></label>
+    <label>Password (at least 6 characters)<input id="pw" type="password" autocomplete="current-password"></label>
+    <button class="btn" id="login">Log in</button>
+    <button class="btn alt" id="signup">Create account</button>
+    <button class="link" id="forgot">Forgot password?</button>
+    <p class="msg" id="amsg" role="status"></p>
+  </section>
+
+  <section id="appView" class="hide">
+    <div class="tabs"><button id="t1" class="on">My books</button><button id="t2">Newsletter</button></div>
+
+    <div id="p1">
+      <form class="box" id="bf">
+        <h2>Add a book I have read</h2>
+        <label>Title<input id="bt" required maxlength="120"></label>
+        <label>Author<input id="ba" maxlength="80"></label>
+        <label>My rating<select id="br"><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option></select></label>
+        <button class="btn" type="submit">Add to my list</button>
+      </form>
+      <h2 id="cnt">Books I have read</h2>
+      <ul id="bl"></ul>
+    </div>
+
+    <div id="p2" class="hide">
+      <form class="box hide" id="nf">
+        <h2>Post a newsletter (admin only)</h2>
+        <label>Title<input id="nt" required maxlength="120"></label>
+        <label>Message<textarea id="nb" rows="6" required maxlength="4000"></textarea></label>
+        <button class="btn" type="submit">Publish</button>
+      </form>
+      <h2>Newsletter</h2>
+      <ul id="nl"></ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Questions or want a book? <a id="wa" target="_blank" rel="noopener">Chat with us on WhatsApp</a></p>
+  </footer>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ====== EDIT THESE ====== */
+var firebaseConfig = { apiKey:"AIzaSyBOC6MirJHY2_dD1jI0-mShjO-epA7bf80", authDomain:"bookdify-cd5e1.firebaseapp.com", projectId:"bookdify-cd5e1", appId:"1:182527057846:web:bbdb724280a5dfd469ab17" };
+var ADMIN_UID = "zkOJslgWYHOQkV4Qifi5PKPzAxg1";   // your own user id, copied from Firebase after you sign up
+var WHATSAPP = "2349075677124";
+/* ======================== */
+firebase.initializeApp(firebaseConfig);
+var auth = firebase.auth(), db = firebase.firestore();
+var $ = function(id){ return document.getElementById(id); };
+$("wa").href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent("Hello Bookdify, I have a question.");
+
+var ERR = {
+  "auth/invalid-credential":"Wrong email or password.", "auth/wrong-password":"Wrong email or password.",
+  "auth/user-not-found":"Wrong email or password.", "auth/email-already-in-use":"That email already has an account. Try logging in.",
+  "auth/weak-password":"Password must be at least 6 characters.", "auth/invalid-email":"Enter a valid email address.",
+  "auth/too-many-requests":"Too many tries. Wait a few minutes and try again.", "auth/network-request-failed":"No internet connection."
+};
+function say(t, good){ var m=$("amsg"); m.textContent=t; m.className="msg"+(good?" ok":""); }
+function fail(e){ say(ERR[e.code] || "Something went wrong. Try again."); }
+function creds(){ return [$("em").value.trim(), $("pw").value]; }
+
+$("login").onclick = function(){ var c=creds(); say(""); auth.signInWithEmailAndPassword(c[0],c[1]).catch(fail); };
+$("signup").onclick = function(){ var c=creds(); say(""); auth.createUserWithEmailAndPassword(c[0],c[1]).catch(fail); };
+$("forgot").onclick = function(){
+  var e=$("em").value.trim(); if(!e){ say("Type your email above first."); return; }
+  auth.sendPasswordResetEmail(e).then(function(){ say("If that email has an account, a reset link is on its way.", true); }).catch(fail);
+};
+$("logout").onclick = function(){ auth.signOut(); };
+
+function tab(n){
+  $("p1").classList.toggle("hide", n!==1); $("p2").classList.toggle("hide", n!==2);
+  $("t1").classList.toggle("on", n===1); $("t2").classList.toggle("on", n===2);
+}
+$("t1").onclick = function(){ tab(1); }; $("t2").onclick = function(){ tab(2); };
+
+var offBooks=null, offNews=null;
+auth.onAuthStateChanged(function(u){
+  if(offBooks){ offBooks(); offBooks=null; } if(offNews){ offNews(); offNews=null; }
+  $("authView").classList.toggle("hide", !!u); $("appView").classList.toggle("hide", !u);
+  $("logout").classList.toggle("hide", !u);
+  if(!u){ $("pw").value=""; return; }
+  $("nf").classList.toggle("hide", u.uid !== ADMIN_UID);
+  var col = db.collection("users").doc(u.uid).collection("books");
+  offBooks = col.orderBy("createdAt","desc").onSnapshot(function(s){
+    var ul=$("bl"); ul.textContent="";
+    $("cnt").textContent = s.size + (s.size===1 ? " book I have read" : " books I have read");
+    if(!s.size){ var e=document.createElement("li"); e.textContent="No books yet. Add the first one above."; ul.appendChild(e); }
+    s.forEach(function(d){
+      var b=d.data(), li=document.createElement("li"), l=document.createElement("div");
+      var t=document.createElement("b"); t.textContent=b.title; var a=document.createElement("small"); a.textContent=b.author||"Author not added";
+      l.appendChild(t); l.appendChild(a);
+      var r=document.createElement("div"); r.style.textAlign="right";
+      var st=document.createElement("div"); st.className="stars"; st.textContent="★".repeat(b.rating)+"☆".repeat(5-b.rating);
+      var x=document.createElement("button"); x.className="link"; x.textContent="Remove"; x.onclick=function(){ col.doc(d.id).delete(); };
+      r.appendChild(st); r.appendChild(x); li.appendChild(l); li.appendChild(r); ul.appendChild(li);
+    });
+  }, function(){ $("cnt").textContent="Could not load your books. Check your connection."; });
+  offNews = db.collection("newsletters").orderBy("createdAt","desc").onSnapshot(function(s){
+    var ul=$("nl"); ul.textContent="";
+    if(!s.size){ var e=document.createElement("li"); e.textContent="No newsletters yet."; ul.appendChild(e); }
+    s.forEach(function(d){
+      var n=d.data(), li=document.createElement("li"); li.className="issue";
+      var h=document.createElement("b"); h.textContent=n.title;
+      var dt=document.createElement("small"); dt.textContent = n.createdAt ? n.createdAt.toDate().toLocaleDateString() : "";
+      var p=document.createElement("p"); p.textContent=n.body;
+      li.appendChild(h); li.appendChild(dt); li.appendChild(p); ul.appendChild(li);
+    });
+  });
+});
+
+$("bf").onsubmit = function(ev){
+  ev.preventDefault(); var u=auth.currentUser; if(!u) return;
+  var t=$("bt").value.trim(); if(!t) return;
+  db.collection("users").doc(u.uid).collection("books").add({
+    title:t, author:$("ba").value.trim(), rating:parseInt($("br").value,10),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){ $("bt").value=""; $("ba").value=""; $("bt").focus(); });
+};
+$("nf").onsubmit = function(ev){
+  ev.preventDefault();
+  db.collection("newsletters").add({
+    title:$("nt").value.trim(), body:$("nb").value.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){ $("nt").value=""; $("nb").value=""; });
+};
+</script>
+</body>
+</html>
